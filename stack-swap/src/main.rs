@@ -1,6 +1,6 @@
 use std::arch::asm;
 
-const SSIZE: usize = 1024 * 128;
+const SSIZE: usize = 64;
 
 #[derive(Debug, Default)]
 #[repr(C)]
@@ -65,7 +65,8 @@ fn main() {
 
         #[cfg(target_arch = "aarch64")]
         {
-            let sp = stack_bottom_aligned as u64;
+            let sp = stack_bottom_aligned.offset(-16) as u64;
+            std::ptr::write(sp as *mut u64, hello as u64);
 
             ctx.sp = sp;
             ctx.lr = hello as u64;
@@ -80,6 +81,14 @@ fn main() {
         }
 
         println!("Switching to new stack...");
+
+        for i in 0..SSIZE {
+            println!(
+                "mem: {}, val: {}",
+                stack_bottom_aligned.offset(-(i as isize)) as usize,
+                *stack_bottom_aligned.offset(-(i as isize))
+            );
+        }
 
         gt_switch(&ctx);
     }
