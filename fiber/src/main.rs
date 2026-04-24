@@ -1,8 +1,13 @@
-use std::arch::{asm, naked_asm};
+use std::{
+    arch::{asm, naked_asm},
+    collections::VecDeque,
+};
 
 const DEFAULT_STACK_SIZE: usize = 1024 * 1024 * 2;
 const MAX_THREADS: usize = 4;
-static mut RUNTIME: usize = 0;
+
+// only for example
+static mut RUNTIME: *mut Runtime = std::ptr::null_mut();
 
 #[derive(PartialEq, Eq, Debug)]
 enum State {
@@ -38,6 +43,7 @@ struct Thread {
 pub struct Runtime {
     threads: Vec<Thread>,
     current: usize,
+    tasks: VecDeque<fn()>,
 }
 
 impl Thread {
@@ -65,17 +71,20 @@ impl Runtime {
         Self {
             threads,
             current: 0,
+            tasks: VecDeque::new(),
         }
     }
-    pub fn init(&self) {
+    pub fn init(&mut self) {
         unsafe {
-            let r_ptr: *const Runtime = self;
-            RUNTIME = r_ptr as usize
+            RUNTIME = self as *mut Runtime;
         }
     }
 
     pub fn run(&mut self) -> ! {
-        while self.t_yield() {}
+        while self.t_yield() {
+            self.fill_available_threads();
+        }
+
         std::process::exit(0);
     }
 
@@ -83,6 +92,16 @@ impl Runtime {
         if self.current != 0 {
             self.threads[self.current].state = State::Available;
             self.t_yield();
+        }
+    }
+
+    fn fill_available_threads(&mut self) {
+        for i in 1..self.threads.len() {
+            if self.threads[i].state == State::Available
+                && let Some(task) = self.tasks.pop_front()
+            {
+                self.schedule_task(i, task);
+            }
         }
     }
 
@@ -124,12 +143,21 @@ impl Runtime {
     }
 
     pub fn spawn(&mut self, f: fn()) {
-        let available_thread = self
+        let idx_thread = self
             .threads
-            .iter_mut()
-            .find(|t| t.state == State::Available)
-            .expect("no available thread");
+            .iter()
+            .position(|t| t.state == State::Available);
 
+        if idx_thread.is_none() {
+            self.tasks.push_back(f);
+            return;
+        }
+
+        self.schedule_task(idx_thread.unwrap(), f);
+    }
+
+    fn schedule_task(&mut self, index: usize, f: fn()) {
+        let available_thread = &mut self.threads[index];
         let size = available_thread.stack.len();
 
         unsafe {
@@ -142,21 +170,19 @@ impl Runtime {
             available_thread.ctx.x30 = thread_entry as usize as u64;
         }
 
-        available_thread.state = State::Ready
+        available_thread.state = State::Ready;
     }
 }
 
 fn guard() {
     unsafe {
-        let r_ptr = RUNTIME as *mut Runtime;
-        (*r_ptr).t_return();
+        (*RUNTIME).t_return();
     }
 }
 
 pub fn yield_thread() {
     unsafe {
-        let r_ptr = RUNTIME as *mut Runtime;
-        (*r_ptr).t_yield();
+        (*RUNTIME).t_yield();
     }
 }
 
@@ -222,6 +248,36 @@ fn main() {
         let id = 2;
 
         for i in 0..5 {
+            println!("thread: {}, cnt: {}", id, i);
+            yield_thread();
+        }
+        println!("thread {} finished", id);
+    });
+
+    runtime.spawn(|| {
+        let id = 3;
+
+        for i in 0..3 {
+            println!("thread: {}, cnt: {}", id, i);
+            yield_thread();
+        }
+        println!("thread {} finished", id);
+    });
+
+    runtime.spawn(|| {
+        let id = 4;
+
+        for i in 0..3 {
+            println!("thread: {}, cnt: {}", id, i);
+            yield_thread();
+        }
+        println!("thread {} finished", id);
+    });
+
+    runtime.spawn(|| {
+        let id = 5;
+
+        for i in 0..2 {
             println!("thread: {}, cnt: {}", id, i);
             yield_thread();
         }
