@@ -7,6 +7,10 @@ name = "c_thread"
 version = "0.1.0"
 
 [[package]]
+name = "fiber"
+version = "0.1.0"
+
+[[package]]
 name = "k_queue"
 version = "0.1.0"
 

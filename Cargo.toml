@@ -1,5 +1,5 @@
 [workspace]
 resolver = "2"
-members = ["c_thread", "k_queue", "stack-swap"]
+members = ["c_thread", "fiber", "k_queue", "stack-swap"]
 
 
