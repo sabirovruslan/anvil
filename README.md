@@ -44,10 +44,6 @@ cargo run -p stack-swap
 
 Implements a small cooperative scheduler with its own thread contexts, stacks, and yielding mechanism. This crate is the clearest bridge between low-level context switching and higher-level runtime design.
 
-Notes:
-
-- [fiber runtime write-up](docs/fiber.md)
-
 Run:
 
 ```bash
@@ -57,10 +53,6 @@ cargo run -p fiber
 ### `k_queue`
 
 Explores event-driven I/O using `kqueue`, which is one of the OS primitives used to build scalable non-blocking systems and reactor-style runtimes.
-
-Notes:
-
-- [kqueue poller write-up](docs/kqueue.md)
 
 Run:
 
