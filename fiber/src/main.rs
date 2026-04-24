@@ -56,6 +56,12 @@ impl Thread {
     }
 }
 
+impl Default for Runtime {
+    fn default() -> Self {
+        Runtime::new()
+    }
+}
+
 impl Runtime {
     pub fn new() -> Self {
         let base_thread = Thread {
@@ -186,6 +192,10 @@ pub fn yield_thread() {
     }
 }
 
+pub fn current_thread_index() -> usize {
+    unsafe { (*RUNTIME).current }
+}
+
 #[unsafe(naked)]
 unsafe extern "C" fn thread_entry() {
     naked_asm!("mov x9, x19", "blr x9", "br x20",);
@@ -231,57 +241,82 @@ unsafe extern "C" fn switch() {
 }
 
 fn main() {
-    let mut runtime = Runtime::new();
+    let mut runtime = Runtime::default();
     runtime.init();
 
     runtime.spawn(|| {
         let id = 1;
 
         for i in 0..10 {
-            println!("thread: {}, cnt: {}", id, i);
+            println!(
+                "task: {}, cnt: {}, thread: {}",
+                id,
+                i,
+                current_thread_index()
+            );
             yield_thread();
         }
-        println!("thread {} finished", id);
+        println!("task {} finished", id);
     });
 
     runtime.spawn(|| {
         let id = 2;
 
         for i in 0..5 {
-            println!("thread: {}, cnt: {}", id, i);
+            println!(
+                "task: {}, cnt: {}, thread: {}",
+                id,
+                i,
+                current_thread_index()
+            );
             yield_thread();
         }
-        println!("thread {} finished", id);
+        println!("task {} finished", id);
     });
 
     runtime.spawn(|| {
         let id = 3;
 
         for i in 0..3 {
-            println!("thread: {}, cnt: {}", id, i);
+            println!(
+                "task: {}, cnt: {}, thread: {}",
+                id,
+                i,
+                current_thread_index()
+            );
             yield_thread();
         }
-        println!("thread {} finished", id);
+        println!("task {} finished", id);
     });
 
     runtime.spawn(|| {
         let id = 4;
 
         for i in 0..3 {
-            println!("thread: {}, cnt: {}", id, i);
+            println!(
+                "task: {}, cnt: {}, thread: {}",
+                id,
+                i,
+                current_thread_index()
+            );
             yield_thread();
         }
-        println!("thread {} finished", id);
+        println!("task {} finished", id);
     });
 
     runtime.spawn(|| {
         let id = 5;
 
         for i in 0..2 {
-            println!("thread: {}, cnt: {}", id, i);
+            println!(
+                "task: {}, cnt: {}, thread: {}",
+                id,
+                i,
+                current_thread_index()
+            );
             yield_thread();
         }
-        println!("thread {} finished", id);
+        println!("task {} finished", id);
     });
 
     runtime.run();
